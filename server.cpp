@@ -72,7 +72,7 @@ void Server::_acceptConnection(void) {
 	}
 
 	epoll_event event;
-	event.events = EPOLLOUT;
+	event.events = EPOLLIN | EPOLLET;
 
 	struct _request *req = new struct _request;
 	req->fd = clientSocket;
@@ -98,7 +98,7 @@ void Server::_processRequests(void) {
 		if (events[i].events & (EPOLLERR | EPOLLHUP))
 			throw ServerException();
 
-		if (events[i].events & EPOLLOUT)
+		if (events[i].events & EPOLLIN)
 		{
 			struct _request *req = static_cast<struct _request *>(events[i].data.ptr);
 			if (!req->isDone)
