@@ -1,0 +1,46 @@
+## "..." = commentary, ignore by parsing
+
+server { = declare a new server block, there may be serveral
+
+----BLOCK SERVER----
+
+listen {port} {host} = address of the server, you connect to it with host:port
+
+server_name {string} = the server name
+
+errpage {path} = redirect to this page if we got an error (NGINX has another argument with is the status code, and the name of the attribute is "error_page". Do we change it ?)
+
+max_filesize_upload (number) = limit the size of file the client can upload (NGINX accept the unit of the number, like "200M", and the name of the attribute is "client_max_body_size". Do we change it ?)
+
+location {path} { = declare a new location block to allow route request to correct location, there may be several
+
+---BLOCK LOCATION---
+
+methods { = declare the allowed methods in this location block, there can be only one by location block
+
+---BLOCK  METHODS---
+
+GET {ON/OFF} = (allow or deny GET methods. Do we handle "on/off" (didn't find example of real config for this one) ?)
+POST {ON/OFF}
+DELETE {ON/OFF}
+
+--------------------
+
+return {number} {path} = used to rewrite URL, to redirect the HTTP. If the path is requested, we send the number response and we go to the new path
+
+root {path} = change the location value above to this value, so it's from this path we will search files
+
+directory_listing {ON/OFF} = enable or not directory listing. If we search for a directory in this location and it got a index (next attribute), it will display all the files in this directory on a page, else, we display an error
+
+index {path} = index of the directory (if we search the directory, we display this page), for the attribute below.
+
+##need to handle CGI
+
+accept_uploaded_file {ON/OFF} = allow or not to upload file
+
+save_uploaded_file {path} = where we save the file uploaded
+--------------------
+
+--------------------
+
+##maybe there is some names that don't correspond to NGINX names
