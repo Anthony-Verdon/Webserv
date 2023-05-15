@@ -19,6 +19,18 @@ static std::string getToken(const std::string& str, char sep, int pos){
 	return (token);
 }
 
+static std::string getExtension(const std::string& fileName) {
+	std::string extension;
+	size_t dot = fileName.find(".");
+	if (dot != std::string::npos) {
+		extension = fileName.substr(dot + 1, fileName.find(",", dot));
+	}
+	else {
+		extension = "text/html";
+	}
+	return (extension);
+}
+
 void Request::processLine(std::string line, int lineToken) {
 	std::string str = getToken(line, ' ', 2);
 	int pos = str.find('\r');
@@ -55,7 +67,7 @@ void Request::processLine(std::string line, int lineToken) {
 			}
 			break;
 		case ACCEPT:
-			str = getToken(str, ',', 1);
+			str = getExtension(_requestHeader[HEAD]);
 			break;
 		default:
 			break;

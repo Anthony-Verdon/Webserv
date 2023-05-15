@@ -2,14 +2,16 @@
 
 void Request::directoryListing(DIR* directory, const std::string& dirName) {
 	std::string tmpHTML = "<!DOCTYPE html>\
-<html lang=\"en\">\
-<head>\
-	<link rel=\"icon\" href=\"images.png\">\
-</head>\
-<body>\
-<p>\
-<ol>\
-";
+	<html lang=\"en\">\
+	<head>\
+		<link rel=\"icon\" href=\"images.png\">\
+		<link rel=\"stylesheet\" href=\"style.css\">\
+	</head>\
+	<body id=\"directory\">\
+	<h1>You are on " + dirName + " directory</h1>\
+	<p>\
+	<ul>\
+	";
 	(void)dirName;
 
 	struct dirent* file;
@@ -19,13 +21,13 @@ void Request::directoryListing(DIR* directory, const std::string& dirName) {
 			break;
 		if (file->d_name[0] == '.')
 			continue ;
-		tmpHTML += "<li><a href=\"";
+		tmpHTML += "<li><span><a href=\"";
 		tmpHTML += file->d_name;
 		tmpHTML += "\">";
 		tmpHTML += file->d_name;
-		tmpHTML += "</a></li>\n";
+		tmpHTML += "</a></span></li>\n";
 	}
-	tmpHTML += "</ol>\
+	tmpHTML += "</ul>\
 	</p>\
 	</body>\
 	</html>";

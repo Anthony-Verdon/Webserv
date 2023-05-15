@@ -52,7 +52,7 @@ void Request::respondToGetRequest(void) {
 
 		std::ostringstream ss;
 		ss << "HTTP/1.1 " << _statusCode << "\r\n";
-		ss << "Content-type: " + _requestHeader[ACCEPT] + "\r\n";
+		ss << "Content-type: " << _requestHeader[ACCEPT] << "\r\n";
 		ss << "Content-Length: " << fileSize << "\r\n\r\n";
 		write(_clientfd, ss.str().c_str(), ss.str().size());
 		ss.str("");

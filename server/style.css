@@ -1,3 +1,32 @@
 body {
 	background-color: lightblue;
 }
+
+#directory {
+	background-color: rgb(181, 200, 95);
+	font-family: "sans-serif";
+}
+
+ul {
+	list-style-image: url("shark.png");
+	padding: 0;
+}
+
+a {
+	font-size: 20px;
+	text-decoration: inherit;
+	color: inherit;
+}
+
+li {
+	display: block;
+}
+
+li span {
+	display: inline-block;
+	margin: 5px;
+	padding: 3px 3px;
+	border: 2px solid #ccc;
+	border-radius: 8px;
+	background-color: #FFA07A;
+}
