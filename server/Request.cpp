@@ -40,18 +40,16 @@ static void editName(std::string& name) {
 void Request::respondToGetRequest(void) {
 	editName(_requestHeader[HEAD]);
 	std::cout << "Name: " << _requestHeader[HEAD] << std::endl;
-	bool canSend = setStatusCode();
 	DIR* directory = opendir(_requestHeader[HEAD].c_str());
 	_isDirectory = false;
 	if (directory == NULL) {
+		setStatusCode();
 		std::ifstream file(_requestHeader[HEAD].c_str(), std::ios::in | std::ios::binary);
 
 		file.seekg(0, std::ios::end);
 		long fileSize = file.tellg();
 		file.seekg(0, std::ios::beg);
 
-		if (canSend == false)
-			fileSize = 0;
 		std::ostringstream ss;
 		ss << "HTTP/1.1 " << _statusCode << "\r\n";
 		ss << "Content-type: " + _requestHeader[ACCEPT] + "\r\n";
@@ -60,7 +58,7 @@ void Request::respondToGetRequest(void) {
 		ss.str("");
 		ss.clear();
 
-		while (!file.eof() && canSend) {
+		while (!file.eof()) {
 			if (fileSize > BUFFER_SIZE) {
 				file.read((char *)_buffer, BUFFER_SIZE);
 				ss.write(_buffer, BUFFER_SIZE);

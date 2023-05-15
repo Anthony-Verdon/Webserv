@@ -4,7 +4,7 @@ void Request::directoryListing(DIR* directory, const std::string& dirName) {
 	std::string tmpHTML = "<!DOCTYPE html>\
 <html lang=\"en\">\
 <head>\
-	<link rel=\"icon\" href=\"server/images.png\">\
+	<link rel=\"icon\" href=\"images.png\">\
 </head>\
 <body>\
 <p>\

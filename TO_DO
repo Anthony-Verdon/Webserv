@@ -1,6 +1,5 @@
-Error pages with the status codes corresponding
+Error pages with the status codes corresponding > Update: 404 error done
 Multiple boundaries with forms
 Text form handlers aren't working anymore ig
 DELETE requests handlers
 Link both multiplexing and conf file parsing to the rest of the project (final step)
-Directory listing
