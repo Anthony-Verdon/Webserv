@@ -1,4 +1,5 @@
 #include "Request.hpp"
+#include <cstdlib>
 #include <iostream>
 
 Request::Request(const Server& other): Server(other), _buffer(new char[BUFFER_SIZE]) {
@@ -13,7 +14,32 @@ Request&	Request::operator=(const Request& other) {
 	return (*this);
 }
 
+static void editName(std::string& name) {
+	while (1) {
+		char* name_c = (char *)name.c_str();
+		size_t len;
+		if (name.find("%") != std::string::npos) {
+			for (size_t i = 0; name_c[i]; i++) {
+				if (name_c[i] == '%') {
+					name_c = &(name_c[i + 1]);
+					break ;
+				}
+			}
+			long c = std::strtol(name_c, NULL, 16);
+			for (len = 0; std::isdigit(name_c[len]); len++);
+			name.replace(name.find("%"), len + 1, (const char*)&c);
+		}
+		else if (name.find("+") != std::string::npos) {
+			name.replace(name.find("+"), 1, " ");
+		}
+		else
+			break ;
+	}
+}
+
 void Request::respondToGetRequest(void) {
+	editName(_requestHeader[HEAD]);
+	std::cout << "Name: " << _requestHeader[HEAD] << std::endl;
 	bool canSend = setStatusCode();
 	DIR* directory = opendir(_requestHeader[HEAD].c_str());
 	if (directory == NULL) {
@@ -49,8 +75,10 @@ void Request::respondToGetRequest(void) {
 		}
 		file.close();
 	}
-	else
-		directoryListing(directory);		
+	else {
+		_isDirectory = true;
+		directoryListing(directory, _requestHeader[HEAD]);
+	}
 }
 
 void Request::respondToPostRequest(void) {
@@ -118,6 +146,7 @@ void Request::readRequest(void) {
 	write(1, buffer_c, end);
 	buffer.assign(buffer_c, end);
 	_method = getMethod(buffer);
+	_isDirectory = false;
 	parseRequest(buffer);
 	switch (_method) {
 		case GET:

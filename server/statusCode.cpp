@@ -43,19 +43,35 @@
 // 503 - Service Unavailable => The server cannot handle the
 // request, must send a Retry-After attribute too
 
+static std::string handleDirectoryCode(strMap& _requestHeader) {
+	std::string dirName = _requestHeader[HEAD];
+
+	if (dirName[dirName.length() - 1] != '/') {
+		_requestHeader[LOCATION] = dirName + "/";
+		return ("308 Permanent Redirect");
+	}
+	else {
+		_requestHeader[LOCATION] = dirName;
+		return ("200 OK");
+	}
+}
+
 bool Request::setStatusCode(void) {
 	std::ifstream file;
 
 	file.open(_requestHeader[HEAD].c_str());
+	std::cout << _requestHeader[HEAD] << std::endl;
 	if (!file && _method != POST) {
 		_statusCode = "404 Not Found";
 		return (false);
 	}
+	else if (_method == GET && _isDirectory)
+		_statusCode = handleDirectoryCode(_requestHeader);
 	else if (_method == POST)
 		_statusCode = "201 Created";
 	else if (_method == DELETE)
 		_statusCode = "204 No Content";
-	else
+	else if (_method == GET )
 		_statusCode = "200 OK";
 	return (true);
 }

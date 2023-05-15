@@ -1,6 +1,6 @@
 #include "Request.hpp"
 
-void Request::directoryListing(DIR* directory) {
+void Request::directoryListing(DIR* directory, const std::string& dirName) {
 	std::string tmpHTML = "<!DOCTYPE html>\
 <html lang=\"en\">\
 <head>\
@@ -10,12 +10,15 @@ void Request::directoryListing(DIR* directory) {
 <p>\
 <ol>\
 ";
+	(void)dirName;
 
 	struct dirent* file;
 	while (true) {	
 		file = readdir(directory);
 		if (file == NULL)
 			break;
+		if (file->d_name[0] == '.')
+			continue ;
 		tmpHTML += "<li><a href=\"";
 		tmpHTML += file->d_name;
 		tmpHTML += "\">";
@@ -30,6 +33,7 @@ void Request::directoryListing(DIR* directory) {
 
 	std::ostringstream ss;
 	ss << "HTTP/1.1 " << _statusCode << "\r\n";
+	ss << "Location: " << _requestHeader[LOCATION] << "\r\n";
 	ss << "Content-type: " + _requestHeader[ACCEPT] + "\r\n";
 	ss << "Content-Length: " << fileSize << "\r\n\r\n";
 	ss << tmpHTML;
@@ -37,4 +41,5 @@ void Request::directoryListing(DIR* directory) {
 	ss.str("");
 	ss.clear();
 	closedir(directory);
+	setStatusCode();
 }

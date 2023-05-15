@@ -23,7 +23,7 @@ class Request: protected Server {
 		void processLine(std::string line, int lineToken);
 		void parseRequest(std::string request);
 		bool setStatusCode(void);
-		void directoryListing(DIR* directory);
+		void directoryListing(DIR* directory, const std::string& dirName);
 
 	private:
 		int	_clientfd;
@@ -32,6 +32,7 @@ class Request: protected Server {
 		std::string _boundary;
 		const char* _buffer;
 		strMap _requestHeader;
+		bool _isDirectory;
 		
 };
 
