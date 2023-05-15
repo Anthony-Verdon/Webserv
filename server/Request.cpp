@@ -42,6 +42,7 @@ void Request::respondToGetRequest(void) {
 	std::cout << "Name: " << _requestHeader[HEAD] << std::endl;
 	bool canSend = setStatusCode();
 	DIR* directory = opendir(_requestHeader[HEAD].c_str());
+	_isDirectory = false;
 	if (directory == NULL) {
 		std::ifstream file(_requestHeader[HEAD].c_str(), std::ios::in | std::ios::binary);
 
@@ -77,6 +78,7 @@ void Request::respondToGetRequest(void) {
 	}
 	else {
 		_isDirectory = true;
+		setStatusCode();
 		directoryListing(directory, _requestHeader[HEAD]);
 	}
 }
@@ -146,7 +148,6 @@ void Request::readRequest(void) {
 	write(1, buffer_c, end);
 	buffer.assign(buffer_c, end);
 	_method = getMethod(buffer);
-	_isDirectory = false;
 	parseRequest(buffer);
 	switch (_method) {
 		case GET:

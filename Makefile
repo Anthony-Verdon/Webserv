@@ -8,7 +8,7 @@ SRCS	:= main.cpp\
 		   utils.cpp\
 		   directoryListing.cpp\
 		   statusCode.cpp
-CC 		:= c++
+CC 		:= g++
 CFLAGS  := -Wall -Wextra -Werror -std=c++98 -g -MMD
 OBJS    := $(addprefix objs/, $(SRCS:.cpp=.o))
 

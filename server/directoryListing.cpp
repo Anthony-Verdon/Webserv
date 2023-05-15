@@ -31,9 +31,11 @@ void Request::directoryListing(DIR* directory, const std::string& dirName) {
 	</html>";
 	size_t fileSize = tmpHTML.length();
 
+	std::cout << "Status code: " << _statusCode << std::endl;
 	std::ostringstream ss;
 	ss << "HTTP/1.1 " << _statusCode << "\r\n";
-	ss << "Location: " << _requestHeader[LOCATION] << "\r\n";
+	if (_requestHeader[LOCATION] != "")
+		ss << "Location: " << _requestHeader[LOCATION] << "\r\n";
 	ss << "Content-type: " + _requestHeader[ACCEPT] + "\r\n";
 	ss << "Content-Length: " << fileSize << "\r\n\r\n";
 	ss << tmpHTML;
@@ -41,5 +43,4 @@ void Request::directoryListing(DIR* directory, const std::string& dirName) {
 	ss.str("");
 	ss.clear();
 	closedir(directory);
-	setStatusCode();
 }

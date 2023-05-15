@@ -47,11 +47,11 @@ static std::string handleDirectoryCode(strMap& _requestHeader) {
 	std::string dirName = _requestHeader[HEAD];
 
 	if (dirName[dirName.length() - 1] != '/') {
-		_requestHeader[LOCATION] = dirName + "/";
+		_requestHeader[LOCATION] = "/" + dirName + "/";
 		return ("308 Permanent Redirect");
 	}
 	else {
-		_requestHeader[LOCATION] = dirName;
+		_requestHeader[LOCATION] = "";
 		return ("200 OK");
 	}
 }
@@ -65,7 +65,7 @@ bool Request::setStatusCode(void) {
 		_statusCode = "404 Not Found";
 		return (false);
 	}
-	else if (_method == GET && _isDirectory)
+	else if (_method == GET && _isDirectory == true)
 		_statusCode = handleDirectoryCode(_requestHeader);
 	else if (_method == POST)
 		_statusCode = "201 Created";
