@@ -22,7 +22,7 @@ static std::string getToken(const std::string& str, char sep, int pos){
 void Request::processLine(std::string line, int lineToken) {
 	std::string str = getToken(line, ' ', 2);
 	int pos = str.find('\r');
-	std::string root = "server/";
+	std::string root = "server";
 	if (pos > 0)
 		str.erase(pos, 1);
 	switch (lineToken) {
@@ -31,14 +31,12 @@ void Request::processLine(std::string line, int lineToken) {
 				str.erase(0, 1);
 				std::cout << str << "\n";
 				if (_method == GET && str.find(root) == std::string::npos) {
-					std::cout << "1" << "\n";
 					if (str.length() == 0)
-						_requestHeader.insert(strPair(HEAD, root + "index.html"));
+						_requestHeader.insert(strPair(HEAD, root + "/index.html"));
 					else
-						_requestHeader.insert(strPair(HEAD, root + str));
+						_requestHeader.insert(strPair(HEAD, root + "/" + str));
 				}
 				else if (_method == GET && str.find(root) != std::string::npos) {
-					std::cout << "2" << "\n";
 					_requestHeader.insert(strPair(HEAD, str));
 				}
 				else if (str == "/" && _method == POST)
