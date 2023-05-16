@@ -1,6 +1,8 @@
 #include "server.hpp"
 
-Server::Server(void) {
+Server::Server(void)
+	: _nbConnections(0)
+{
 	_socketAddress.sin_family = AF_INET;
 	_socketAddress.sin_port = htons(PORT);
 	_socketAddress.sin_addr.s_addr = inet_addr(IP_ADRR);
@@ -16,38 +18,59 @@ Server::Server(void) {
 	if (listen(_socketFd, LISTEN_BACKLOG) < 0)
 		throw ServerException();
 
-	_epollFd = epoll_create(WORKER_NB);
-	if (_epollFd < 0)
-		throw ServerException();
+	FD_ZERO(&_readSet);
+	FD_ZERO(&_writeSet);
+	FD_SET(_socketFd, &_readSet);
 }
 
-Server::Server(Server const &other) {
-	*this = other;
-}
+Server::Server(Server const &other)
+	: _socketFd(other._socketFd), _socketAddress(other._socketAddress), _socketAddressLen(other._socketAddressLen)
+{}
 
-Server &Server::operator=(Server const &other) {
+Server &Server::operator=(Server const &other)
+{
 	_socketFd = other._socketFd;
 	_socketAddress = other._socketAddress;
 	_socketAddressLen = other._socketAddressLen;
-	_epollFd = other._epollFd;
 	return *this;
 }
 
-Server::~Server() {
-	close(_epollFd);
+Server::~Server()
+{
 	close(_socketFd);
 }
 
-void Server::start(void) {
+void Server::start(void)
+{
+	fd_set readSet;
+	fd_set writeSet;
+
 	std::cout << "listening on " << IP_ADRR << ":" << PORT << "\n";
 	while (true)
 	{
-		_acceptConnection();
-		_processRequests();
+		readSet = _readSet;
+		writeSet = _writeSet;
+
+		if (select(WORKER_NB + 1, &readSet, &writeSet, NULL, NULL) < 0)
+			throw ServerException();
+
+		for (int i = 0; i < WORKER_NB; i++)
+		{
+			if (FD_ISSET(i, &readSet))
+			{
+				if (i == _socketFd)
+					_acceptConnection();
+				else
+					_readRequest(i);
+			}
+			else if (FD_ISSET(i, &writeSet))
+				_processRequest(i);
+		}
 	}
 }
 
-void Server::_readFile(char const *filePath, std::string &buffer) {
+void Server::_readFile(char const *filePath, std::string &buffer)
+{
 	std::ifstream file(filePath, std::ios::binary);
 	if (!file.is_open())
 		throw ServerException();
@@ -62,7 +85,8 @@ void Server::_readFile(char const *filePath, std::string &buffer) {
 	file.close();
 }
 
-void Server::_acceptConnection(void) {
+void Server::_acceptConnection(void)
+{
 	int clientSocket = accept(_socketFd, (sockaddr*)&_socketAddress, &_socketAddressLen);
 	if (clientSocket < 0)
 	{
@@ -71,63 +95,50 @@ void Server::_acceptConnection(void) {
 		return ;
 	}
 
-	epoll_event event;
-	event.events = EPOLLIN | EPOLLET;
-
-	struct _request *req = new struct _request;
-	req->fd = clientSocket;
-	req->isDone = false;
-	event.data.ptr = req;
-
-	if (epoll_ctl(_epollFd, EPOLL_CTL_ADD, clientSocket, &event) < 0)
-		throw ServerException();
-
+	FD_SET(clientSocket, &_readSet);
+	++_nbConnections;
 	std::cout << "accepted connection\n";
 }
 
-void Server::_processRequests(void) {
-	epoll_event events[WORKER_NB];
-	int n = epoll_wait(_epollFd, events, WORKER_NB, 10);
-	if (n < 0)
+void Server::_readRequest(int fd)
+{
+	static bool first = true;
+
+	char buffer[1024];
+	int ret = read(fd, buffer, 1024);
+	if (ret < 0)
 		throw ServerException();
-	if (n == 0)
-		return ;
-
-	for (int i = 0; i < n; i++)
+	else if (ret == 0)
 	{
-		if (events[i].events & (EPOLLERR | EPOLLHUP))
-			throw ServerException();
-
-		if (events[i].events & EPOLLIN)
-		{
-			struct _request *req = static_cast<struct _request *>(events[i].data.ptr);
-			if (!req->isDone)
-			{
-				std::cout << "processing request\n";
-
-				_readFile("index.html", req->buffer);
-
-				std::ostringstream oss;
-				oss << "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: "
-					<< req->buffer.size() << "\r\n\r\n" << req->buffer;
-				if (write(req->fd, oss.str().c_str(), oss.str().size()) < 0)
-					throw ServerException();
-
-				req->isDone = true;
-				std::cout << "sent response\n";
-			}
-			else
-			{
-				if (epoll_ctl(_epollFd, EPOLL_CTL_DEL, req->fd, NULL) < 0)
-					throw ServerException();
-				close(req->fd);
-				delete req;
-				std::cout << "closing connection\n";
-			}
-		}
+		close(fd);
+		FD_CLR(fd, &_readSet);
+		--_nbConnections;
+		std::cout << "closed connection\n";
+		return ;
 	}
+	else
+		std::cout << ret << " bytes read\n";
+
+	FD_CLR(fd, &_readSet);
+	FD_SET(fd, &_writeSet);
 }
 
-const char* Server::ServerException::what(void) const throw() {
+void Server::_processRequest(int fd)
+{
+	std::string buffer;
+	_readFile("index.html", buffer);
+
+	std::ostringstream oss;
+	oss << "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: "
+		<< buffer.size() << "\r\n\r\n" << buffer;
+	if (write(fd, oss.str().c_str(), oss.str().size()) < 0)
+		throw ServerException();
+	std::cout << "sent response\n";
+
+	FD_CLR(fd, &_writeSet);
+	FD_SET(fd, &_readSet);
+}
+
+char const *Server::ServerException::what(void) const throw() {
 	return strerror(errno);
 }

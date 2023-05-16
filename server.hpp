@@ -16,12 +16,16 @@
 #include <fcntl.h>
 #include <fstream>
 #include <utility>
-#include <sys/epoll.h>
+#include <sys/select.h>
 
 #define IP_ADRR "0.0.0.0"
 #define PORT 8080
-#define LISTEN_BACKLOG 10
-#define WORKER_NB 1000
+#define LISTEN_BACKLOG 100
+#define WORKER_NB 100
+
+#if WORKER_NB > FD_SETSIZE
+# error "WORKER_NB must be lower than FD_SETSIZE".
+#endif
 
 class Server {
 	public:
@@ -34,23 +38,25 @@ class Server {
 
 		class ServerException : public std::exception {
 			public:
-				const char* what(void) const throw();
+				char const *what(void) const throw();
 		};
 
 
 	private:
 		struct _request {
 			int			fd;
-			std::string buffer;
 			bool		isDone;
 		};
 
 		int			_socketFd;
 		sockaddr_in	_socketAddress;
 		socklen_t	_socketAddressLen;
-		int			_epollFd;
+		int			_nbConnections;
+		fd_set 		_readSet;
+		fd_set 		_writeSet;
 
 		void _readFile(char const *file, std::string &buffer);
 		void _acceptConnection(void);
-		void _processRequests(void);
+		void _readRequest(int fd);
+		void _processRequest(int fd);
 };
