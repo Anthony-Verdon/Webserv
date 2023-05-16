@@ -1,0 +1,15 @@
+html {
+	width: 100%;
+	height: 100%;
+	cursor: none;
+	overflow: hidden;
+}
+
+#cursor {
+	position: absolute;
+	width: 100px;
+	height: 100px;
+	background: url("https://www.pngarts.com/files/10/Cursor-PNG-Pic.png") no-repeat;
+	background-size: 100% 100%;
+	z-index: 100;
+}
