@@ -37,9 +37,16 @@ static void editName(std::string& name) {
 	}
 }
 
+static void getQuery(std::string& query, const std::string& name) {
+	size_t delimiter = name.find("?");
+	if (delimiter != std::string::npos)
+		query = name.substr(delimiter + 1);
+}
+
 void Request::respondToGetRequest(void) {
 	editName(_requestHeader[HEAD]);
-	std::cout << "Name: " << _requestHeader[HEAD] << std::endl;
+	getQuery(_query, _requestHeader[HEAD]);
+	std::cout << _query << std::endl;
 	DIR* directory = opendir(_requestHeader[HEAD].c_str());
 	_isDirectory = false;
 	if (directory == NULL) {

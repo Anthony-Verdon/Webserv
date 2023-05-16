@@ -30,6 +30,7 @@ class Request: protected Server {
 		int _method;
 		std::string _statusCode;
 		std::string _boundary;
+		std::string _query;
 		const char* _buffer;
 		strMap _requestHeader;
 		bool _isDirectory;
