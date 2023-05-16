@@ -19,7 +19,6 @@ Server::Server(void)
 		throw ServerException();
 
 	FD_ZERO(&_readSet);
-	FD_ZERO(&_writeSet);
 	FD_SET(_socketFd, &_readSet);
 }
 
@@ -43,15 +42,13 @@ Server::~Server()
 void Server::start(void)
 {
 	fd_set readSet;
-	fd_set writeSet;
 
 	std::cout << "listening on " << IP_ADRR << ":" << PORT << "\n";
 	while (true)
 	{
 		readSet = _readSet;
-		writeSet = _writeSet;
 
-		if (select(WORKER_NB + 1, &readSet, &writeSet, NULL, NULL) < 0)
+		if (select(WORKER_NB + 1, &readSet, NULL, NULL, NULL) < 0)
 			throw ServerException();
 
 		for (int i = 0; i < WORKER_NB; i++)
@@ -61,10 +58,8 @@ void Server::start(void)
 				if (i == _socketFd)
 					_acceptConnection();
 				else
-					_readRequest(i);
+					_processRequest(i);
 			}
-			else if (FD_ISSET(i, &writeSet))
-				_processRequest(i);
 		}
 	}
 }
@@ -100,15 +95,13 @@ void Server::_acceptConnection(void)
 	std::cout << "accepted connection\n";
 }
 
-void Server::_readRequest(int fd)
+void Server::_processRequest(int fd)
 {
-	static bool first = true;
-
-	char buffer[1024];
-	int ret = read(fd, buffer, 1024);
-	if (ret < 0)
+	char header_buffer[1024];
+	int rc = recv(fd, header_buffer, 1024, 0);
+	if (rc == -1)
 		throw ServerException();
-	else if (ret == 0)
+	else if (rc == 0)
 	{
 		close(fd);
 		FD_CLR(fd, &_readSet);
@@ -116,27 +109,17 @@ void Server::_readRequest(int fd)
 		std::cout << "closed connection\n";
 		return ;
 	}
-	else
-		std::cout << ret << " bytes read\n";
+	std::cout << rc << " bytes read\n";
 
-	FD_CLR(fd, &_readSet);
-	FD_SET(fd, &_writeSet);
-}
-
-void Server::_processRequest(int fd)
-{
-	std::string buffer;
-	_readFile("index.html", buffer);
+	std::string response_buffer;
+	_readFile("index.html", response_buffer);
 
 	std::ostringstream oss;
 	oss << "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: "
-		<< buffer.size() << "\r\n\r\n" << buffer;
+		<< response_buffer.size() << "\r\n\r\n" << response_buffer;
 	if (write(fd, oss.str().c_str(), oss.str().size()) < 0)
 		throw ServerException();
 	std::cout << "sent response\n";
-
-	FD_CLR(fd, &_writeSet);
-	FD_SET(fd, &_readSet);
 }
 
 char const *Server::ServerException::what(void) const throw() {

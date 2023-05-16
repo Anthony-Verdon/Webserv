@@ -53,10 +53,8 @@ class Server {
 		socklen_t	_socketAddressLen;
 		int			_nbConnections;
 		fd_set 		_readSet;
-		fd_set 		_writeSet;
 
 		void _readFile(char const *file, std::string &buffer);
 		void _acceptConnection(void);
-		void _readRequest(int fd);
 		void _processRequest(int fd);
 };
