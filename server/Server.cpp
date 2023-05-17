@@ -1,3 +1,5 @@
+#include <cstdlib>
+
 #include "Server.hpp"
 #include "Request.hpp"
 
@@ -9,7 +11,7 @@ Server::Server(void)
 	_socketAddress.sin_addr.s_addr = inet_addr(IP_ADRR);
 	_socketAddressLen = sizeof(_socketAddress);
 
-	_socketFd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
+	_socketFd = socket(AF_INET, SOCK_STREAM, 0);
 	if (_socketFd < 0)
 		throw ServerException();
 
@@ -40,6 +42,14 @@ Server::~Server()
 	close(_socketFd);
 }
 
+void Server::emergencyStop(void)
+{
+	for (int i = 3; i < FD_SETSIZE; i++)
+		close(i);
+	std::cout << "server stopped\n";
+	std::exit(EXIT_FAILURE);
+}
+
 void Server::start(void)
 {
 	fd_set readSet;
@@ -50,7 +60,11 @@ void Server::start(void)
 		readSet = _readSet;
 
 		if (select(FD_SETSIZE + 1, &readSet, NULL, NULL, NULL) < 0)
+		{
+			if (errno == EINTR)
+				emergencyStop();
 			throw ServerException();
+		}
 
 		for (int i = 0; i < FD_SETSIZE; i++)
 		{
@@ -100,13 +114,13 @@ void Server::_processRequest(int fd)
 {
 	std::string header_buffer(1024, 0);
 	int rc = recv(fd, &header_buffer[0], 1024, 0);
-	if (rc == -1)
-		throw ServerException();
-	else if (rc == 0)
+	if (rc <= 0)
 	{
 		close(fd);
 		FD_CLR(fd, &_readSet);
 		--_nbConnections;
+		if (rc < 0)
+			std::cerr << "error: " << strerror(errno) << "\n";
 		std::cout << "closed connection\n";
 		return ;
 	}

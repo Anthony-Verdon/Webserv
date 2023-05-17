@@ -29,6 +29,7 @@ class Server {
 		~Server();
 
 		void start(void);
+		void emergencyStop(void);
 
 		class ServerException : public std::exception {
 			public:
@@ -48,6 +49,7 @@ class Server {
 		int			_nbConnections;
 		fd_set 		_readSet;
 
+		void _loop(void);
 		void _readFile(char const *file, std::string &buffer);
 		void _acceptConnection(void);
 		void _processRequest(int fd);

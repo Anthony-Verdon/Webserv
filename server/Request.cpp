@@ -62,9 +62,6 @@ void Request::respondToGetRequest(void) {
 		ss << "HTTP/1.1 " << _statusCode << "\r\n";
 		ss << "Content-type: " << _requestHeader[ACCEPT] << "\r\n";
 		ss << "Content-Length: " << fileSize << "\r\n\r\n";
-		write(_clientfd, ss.str().c_str(), ss.str().size());
-		ss.str("");
-		ss.clear();
 
 		while (!file.eof()) {
 			if (fileSize > BUFFER_SIZE) {
@@ -76,10 +73,8 @@ void Request::respondToGetRequest(void) {
 				file.read((char *)_buffer, fileSize);
 				ss.write(_buffer, fileSize);
 			}
-			write(_clientfd, ss.str().c_str(), ss.str().size());
-			ss.str("");
-			ss.clear();
 		}
+		send(_clientfd, ss.str().c_str(), ss.str().size(), 0);
 		file.close();
 	}
 	else {
@@ -147,6 +142,5 @@ void Request::readRequest(std::string const &rawRequest) {
 }
 
 Request::~Request(void){
-	close(_clientfd);
 	delete [] _buffer;
 }
