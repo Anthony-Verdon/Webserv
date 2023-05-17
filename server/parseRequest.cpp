@@ -1,5 +1,7 @@
 #include "Request.hpp"
 
+void trimString(std::string& string, const char* charset);
+
 static std::string getToken(const std::string& str, char sep, int pos){
 	std::string token;
 	int cur_pos;

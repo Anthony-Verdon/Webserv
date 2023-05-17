@@ -1,72 +1,123 @@
+#include "Server.hpp"
 #include "Request.hpp"
-#include <iostream>
 
-void Server::exitWithError(const std::string& errorMessage) {
-	std::cerr << errorMessage;
-	close(_sockfd);
-	std::exit(1);
+Server::Server(void)
+	: _nbConnections(0)
+{
+	_socketAddress.sin_family = AF_INET;
+	_socketAddress.sin_port = htons(PORT);
+	_socketAddress.sin_addr.s_addr = inet_addr(IP_ADRR);
+	_socketAddressLen = sizeof(_socketAddress);
+
+	_socketFd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
+	if (_socketFd < 0)
+		throw ServerException();
+
+	if (bind(_socketFd, (sockaddr*)&_socketAddress, _socketAddressLen) < 0)
+		throw ServerException();
+
+	if (listen(_socketFd, LISTEN_BACKLOG) < 0)
+		throw ServerException();
+
+	FD_ZERO(&_readSet);
+	FD_SET(_socketFd, &_readSet);
 }
 
-void Server::createServerSocket(void) {
-	//create the socket server
-	_sockfd = socket(AF_INET, SOCK_STREAM, 0);
-	if (_sockfd < 0)
-		exitWithError("error: socket failed\n");
+Server::Server(Server const &other)
+	: _socketFd(other._socketFd), _socketAddress(other._socketAddress), _socketAddressLen(other._socketAddressLen)
+{}
 
-	int option = 1;
-	if (setsockopt(_sockfd, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(int)) < 0)
-		exitWithError("error: setsockopt failed\n");
+Server &Server::operator=(Server const &other)
+{
+	_socketFd = other._socketFd;
+	_socketAddress = other._socketAddress;
+	_socketAddressLen = other._socketAddressLen;
+	return *this;
 }
 
-void Server::bindPort(void) {
-	//bind to the PORT with the informations above
-	if (bind(_sockfd, (sockaddr*)&_sockAddr, _sockAddr_len) < 0)
-		exitWithError("error: binding failed\n");
+Server::~Server()
+{
+	close(_socketFd);
 }
 
-void Server::listenForRequest(void) {
-	//start to listen to request (= wait)
-	if (listen(_sockfd, 1) < 0)
-		exitWithError("error: listen failed\n");
-	std::ostringstream ss;
-    ss << "\n*** Listening on ADDRESS: " << inet_ntoa(_sockAddr.sin_addr)
-        << " PORT: " << ntohs(_sockAddr.sin_port)
-        << " ***\n\n";
-	std::cout << ss.str() << std::endl;
+void Server::start(void)
+{
+	fd_set readSet;
+
+	std::cout << "listening on " << IP_ADRR << ":" << PORT << "\n";
+	while (true)
+	{
+		readSet = _readSet;
+
+		if (select(FD_SETSIZE + 1, &readSet, NULL, NULL, NULL) < 0)
+			throw ServerException();
+
+		for (int i = 0; i < FD_SETSIZE; i++)
+		{
+			if (FD_ISSET(i, &readSet))
+			{
+				if (i == _socketFd)
+					_acceptConnection();
+				else
+					_processRequest(i);
+			}
+		}
+	}
 }
 
-Server::Server(std::string ipAddr, int port) {
-	_ipAddr = ipAddr;
-	_port = port;
-	_sockAddr_len = sizeof(_sockAddr);
-	_sockAddr.sin_family = AF_INET;
-	_sockAddr.sin_port = htons(_port);
-	_sockAddr.sin_addr.s_addr = inet_addr(_ipAddr.c_str());
+void Server::_readFile(char const *filePath, std::string &buffer)
+{
+	std::ifstream file(filePath, std::ios::binary);
+	if (!file.is_open())
+		throw ServerException();
 
-	createServerSocket();
-	bindPort();
-	listenForRequest();
-	
-	Request request(*this);
+	file.seekg(0, file.end);
+	std::size_t size = file.tellg();
+	file.seekg(0, file.beg);
 
-	if (_sockfd > 0)
-		request.acceptRequest();
+	buffer.resize(size);
+	file.read(&buffer[0], size);
+
+	file.close();
 }
 
-Server::Server(void) {
+void Server::_acceptConnection(void)
+{
+	int clientSocket = accept(_socketFd, (sockaddr*)&_socketAddress, &_socketAddressLen);
+	if (clientSocket < 0)
+	{
+		if (errno != EAGAIN && errno != EWOULDBLOCK)
+			throw ServerException();
+		return ;
+	}
+
+	FD_SET(clientSocket, &_readSet);
+	++_nbConnections;
+	std::cout << "accepted connection\n";
 }
 
-Server::Server(const Server& other){
-	_sockfd = other._sockfd;
-	_sockAddr = other._sockAddr;
-	_sockAddr_len = other._sockAddr_len;
+void Server::_processRequest(int fd)
+{
+	std::string header_buffer(1024, 0);
+	int rc = recv(fd, &header_buffer[0], 1024, 0);
+	if (rc == -1)
+		throw ServerException();
+	else if (rc == 0)
+	{
+		close(fd);
+		FD_CLR(fd, &_readSet);
+		--_nbConnections;
+		std::cout << "closed connection\n";
+		return ;
+	}
+	std::cout << rc << " bytes read\n";
+
+	Request request(fd);
+	request.readRequest(header_buffer);
+
+	std::cout << "sent response\n";
 }
 
-Server&	Server::operator=(const Server &other){
-	(void)other;
-	return (*this);
-}
-
-Server::~Server(void){
-	close(_sockfd);
+char const *Server::ServerException::what(void) const throw() {
+	return strerror(errno);
 }

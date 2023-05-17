@@ -2,10 +2,11 @@
 #include <cstdlib>
 #include <iostream>
 
-Request::Request(const Server& other): Server(other), _buffer(new char[BUFFER_SIZE]) {
-}
+Request::Request(int clientfd)
+	: _clientfd(clientfd), _method(-1), _buffer(new char[BUFFER_SIZE])
+{}
 
-Request::Request(const Request& other): Server("0.0.0.0", 8080) {
+Request::Request(const Request& other) {
 	(void)other;
 }
 
@@ -54,7 +55,7 @@ void Request::respondToGetRequest(void) {
 		std::ifstream file(_requestHeader[HEAD].c_str(), std::ios::in | std::ios::binary);
 
 		file.seekg(0, std::ios::end);
-		long fileSize = file.tellg();
+		std::streampos fileSize = file.tellg();
 		file.seekg(0, std::ios::beg);
 
 		std::ostringstream ss;
@@ -116,24 +117,6 @@ void Request::respondToDeleteRequest(void) {
 	file.close();
 }
 
-void Request::acceptRequest(void) {
-	while (true)
-	{
-		//when someone connect, it accept it
-		_clientfd = accept(_sockfd, (sockaddr*)&_sockAddr, &_sockAddr_len);
-		if (_clientfd < 0) {
-			std::ostringstream ss;
-			ss <<
-			"Request failed to accept incoming connection from ADDRESS: "
-			<< inet_ntoa(_sockAddr.sin_addr) << "; PORT: "
-			<< ntohs(_sockAddr.sin_port);
-			exitWithError("error: log\n");
-		}
-		readRequest();
-		close(_clientfd);
-	}
-}
-
 static int getMethod(std::string buffer) {
 	if (buffer.find("GET") != buffer.npos)	
 		return (GET);
@@ -144,16 +127,9 @@ static int getMethod(std::string buffer) {
 	return (ERROR);
 }
 
-void Request::readRequest(void) {
-	char* buffer_c = new char[BUFFER_SIZE];
-	std::string buffer;
-	int	end;
-	if ((end = read(_clientfd, buffer_c, (BUFFER_SIZE) - 1)) < 0)
-		exitWithError("error: failed to read client socket\n");
-	write(1, buffer_c, end);
-	buffer.assign(buffer_c, end);
-	_method = getMethod(buffer);
-	parseRequest(buffer);
+void Request::readRequest(std::string const &rawRequest) {
+	_method = getMethod(rawRequest);
+	parseRequest(rawRequest);
 	switch (_method) {
 		case GET:
 			respondToGetRequest();	
@@ -168,7 +144,6 @@ void Request::readRequest(void) {
 			break;
 	}
 	_requestHeader.clear();
-	delete []buffer_c;
 }
 
 Request::~Request(void){

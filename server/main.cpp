@@ -3,7 +3,8 @@
 //start program and connect to "localhost:8080"
 int	main(void)
 {
-	Server server("0.0.0.0", 8080);
+	Server server;
+	server.start();
 
-	return (EXIT_SUCCESS);
+	return 0;
 }
